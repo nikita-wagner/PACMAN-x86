@@ -1,0 +1,1143 @@
+buffer times 1024 db 0 ; Buffer to store input text
+start:
+    ; Initialize buffer pointer
+    call clear_screen
+    call set_cursor_position
+    mov di, buffer
+
+read_input:
+    ; Wait for key press
+    mov ah, 0
+    int 0x16
+    cmp al, 13 ; ASCII code for Enter key
+    je process_input
+
+    ; Store character in buffer
+    mov [di], al
+    inc di
+
+    ; Echo character to screen
+    mov ah, 0x0e
+    int 0x10
+
+    jmp read_input
+
+process_input:
+    mov byte [di], 0  ; Null-terminate the buffer
+    call clear_screen ; Clear the screen
+
+    call set_cursor_position ; Set cursor position to top-left corner
+
+    mov si, buffer ; Print the input text
+    call print_string
+
+    jmp read_input
+
+
+print_string:
+    mov ah, 0x0e
+    ret
+
+.repeat:
+    lodsb
+    cmp al, 0
+    je .done
+    int 0x10
+    jmp .repeat
+
+.done:
+    jmp $
+
+clear_screen:
+    mov ah, 0x06
+    mov al, 0    ; Number of lines to scroll (0 = clear entire screen)
+    mov bh, 0x07 ; Attribute (white on black)
+    mov cx, 0    ; Start at top-left corner (row 0, column 0)
+    mov dx, 0x184f ; End at bottom-right corner (row 24, column 79)
+    int 0x10
+    ret
+
+set_cursor_position:
+    mov ah, 0x02 ; Function to set cursor position
+    mov bh, 0x00 ; Page number (0)
+    mov dh, 0x00 ; Row (0)
+    mov dl, 0x00 ; Column (0)
+    int 0x10
+    ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+##### Print in color
+; pacman.asm
+bits 16
+org 0x9000
+
+start:
+    call clear_screen
+    mov si, hello_world
+    mov bl, 0x0a  ; Set the color attribute (green)
+    call print_string
+    jmp $
+
+clear_screen:
+    mov ah, 0x06  ; BIOS function: scroll up window
+    mov al, 0     ; Clear entire screen
+    mov bh, 0x07  ; Attribute for cleared screen (white on black)
+    mov cx, 0     ; Top-left corner (0, 0)
+    mov dh, 24    ; Bottom-right corner (24, 79)
+    mov dl, 79
+    int 0x10
+    ret
+
+print_string:
+    mov ah, 0x13  ; BIOS function: write string
+    mov al, 0x01  ; Attribute: update cursor
+    mov bh, 0x00  ; Page number
+    mov bl, 0x0a  ; Color attribute (green)
+    mov cx, 12    ; String length
+    mov dh, 0     ; Row
+    mov dl, 0     ; Column
+    mov bp, si    ; String offset
+    int 0x10
+    ret
+
+hello_world db 'Hello World!', 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+##### Print Pixel
+; pacman.asm
+bits 16
+org 0x9000
+
+start:
+    call set_video_mode
+    call draw_pixel
+    jmp $
+
+set_video_mode:
+    mov ah, 0x00  ; BIOS function: set video mode
+    mov al, 0x13  ; Video mode: VGA 320x200 256-color
+    int 0x10
+    ret
+
+draw_pixel:
+    mov ah, 0x0c  ; BIOS function: write pixel
+    mov al, 0x0a  ; Pixel color (green)
+    mov cx, 160   ; X-coordinate (0-319)
+    mov dx, 100   ; Y-coordinate (0-199)
+    int 0x10
+    ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### Color Hue
+; pacman.asm
+bits 16                 ; Set the code generation to 16-bit mode
+org 0x9000              ; Set the origin address to 0x9000
+
+start:
+    call set_video_mode ; Call the function to set the video mode
+    call rgb_hue
+    jmp $               ; Infinite loop to keep the program running
+
+
+
+rgb_hue:
+    mov bx, 0x2121
+    b:
+        call sleep
+        call background     ; Call the function to draw the background
+        call pacman
+        add bx, 0x0001
+        add bx, 0x0100
+        cmp bx, 0x3737
+        je rgb_hue
+        jmp b
+    ret
+
+
+sleep:
+    xor cx, cx
+    y:
+        xor ax, ax
+    z:
+        inc ax
+        cmp ax, 0xFFFFFFFFFFFFFFFF
+        jne z
+        inc cx
+        cmp cx, 0xAAA
+        jne y
+    ret
+
+pacman:
+
+
+
+    mov ax, 0x0c00        ; Set AH to 0x0c (BIOS function: write pixel) ; Set AL to 0x01 (pixel color: blue) 
+    
+    l_b:
+    mov cx, 157         ; Set CX to 160 (X-coordinate: 0-319)
+    mov dx, 95          ; Set DX to 100 (Y-coordinate: 0-199)
+    int 0x10            ; Call the BIOS video interrupt
+    l_a:
+        inc cx
+        int 0x10
+        cmp cx, 163
+        jne l_a
+    
+
+
+    ret
+
+background:
+    mov ax, 0xA000      ; Set AX to 0xA000 (VGA memory segment address)
+    mov es, ax          ; Set ES to the VGA memory segment
+    xor di, di          ; Set DI to 0 (offset into the VGA memory)
+    mov ax, bx      ;* Set AX to 0x0A0A (pixel color for both bytes)
+    mov cx, 320 * 200 / 2 ; Set CX to the number of words to fill (total pixels / 2)
+    rep stosw           ; Fill the VGA memory with the pixel color using rep stosw
+    ret
+
+set_video_mode:
+    mov ah, 0x00        ; Set AH to 0x00 (BIOS function: set video mode)
+    mov al, 0x13        ; Set AL to 0x13 (video mode: VGA 320x200 256-color)
+    int 0x10            ; Call the BIOS video interrupt
+    ret
+
+draw_pixel:
+    mov ah, 0x0c        ; Set AH to 0x0c (BIOS function: write pixel)
+    mov al, 0x00        ; Set AL to 0x01 (pixel color: blue)
+    mov cx, 160         ; Set CX to 160 (X-coordinate: 0-319)
+    mov dx, 100         ; Set DX to 100 (Y-coordinate: 0-199)
+    int 0x10            ; Call the BIOS video interrupt
+    ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###
+; Draw a single pixel example
+bits 16
+org 0x9000
+
+start:
+    ; Set video mode (320x200, 256 colors)
+    mov ax, 0x0013
+    int 0x10
+
+    ; Set up video memory segment
+    mov ax, 0xA000
+    mov es, ax
+
+    ; Calculate pixel offset (for example, x=160, y=100)
+    mov bx, 100     ; y-coordinate
+    mov ax, 320
+    mul bx
+    add ax, 160     ; x-coordinate
+
+    ; Draw the pixel (white color)
+    mov di, ax
+    mov byte [es:di], 0x05
+
+    ; Wait for key press
+    mov ah, 0x00
+    int 0x16
+
+    ; Return to text mode
+    mov ax, 0x0003
+    int 0x10
+
+    ; Exit
+    ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###
+;filename db 'BACKGRND.TXT', 0
+
+start:
+    call draw_background
+
+
+    ; Wait for key press
+    mov ah, 0x00
+    int 0x16
+
+    ; Return to text mode
+    mov ax, 0x0003
+    int 0x10
+
+    ; Exit
+    ret
+
+
+draw_background:
+    ; Set video mode (320x200, 256 colors)
+    mov ax, 0x0013
+    int 0x10
+
+    ; Set up video memory segment
+    mov ax, 0xA000
+    mov es, ax
+
+    ; Draw the pixel (white color)
+    mov di, 0
+    
+    loop_a:
+        mov byte [es:di], 0x02
+        inc di 
+        cmp di, 320 * 200
+        jne loop_a
+
+    ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#####IMPORTANT
+bits 16
+org 0x9000
+
+mov bx, 0x000a  ; Set the color attribute (green)
+mov [color_attr], bx  ; Store it in memory
+
+start:
+    call clear_screen
+    call print_string
+    call sleep
+    ;call enter_key
+    ;call set_video_mode
+    ;call draw_pixel
+    jmp start
+
+clear_screen:
+    mov ah, 0x06  ; BIOS function: scroll up window
+    mov al, 0     ; Clear entire screen
+    mov bh, 0x07  ; Attribute for cleared screen (white on black)
+    mov cx, 0     ; Top-left corner (0, 0)
+    mov dh, 24    ; Bottom-right corner (24, 79)
+    mov dl, 79
+    int 0x10
+    ret
+
+print_string:
+    mov ah, 0x02
+    int 0x1A
+
+    mov si, hello_world
+    mov ah, 0x13  ; BIOS function: write string
+    mov al, 0x01  ; Attribute: update cursor
+
+    mov bh, 0x00  ; Page number
+    mov bl, dh  ; Color attribute (green)
+
+    mov cx, 12    ; String length
+    mov dh, 0     ; Row
+    mov dl, 0     ; Column
+    mov bp, si    ; String offset
+    int 0x10
+    ret
+
+color_attr dw 0x0000  ; Memory location for color attribute
+hello_world db 'Hello World!', 0
+
+
+enter_key:
+    ; Wait for a key press
+    mov ah, 0x00
+    int 0x16
+    ; Check if the key pressed is Enter (ASCII 0x0D)
+    cmp al, 0x0D
+    ;jne enter_key
+    ret
+
+
+
+
+
+set_video_mode:
+    mov ah, 0x00  ; BIOS function: set video mode
+    mov al, 0x13  ; Video mode: VGA 320x200 256-color
+    int 0x10
+    ret
+
+draw_pixel:
+    mov ah, 0x0c  ; BIOS function: write pixel
+    mov al, 0x0a  ; Pixel color (green)
+    mov cx, 160   ; X-coordinate (0-319)
+    mov dx, 100   ; Y-coordinate (0-199)
+    int 0x10
+    ret
+
+sleep:
+    xor cx, cx
+    y:
+        xor ax, ax
+    z:
+        inc ax
+        cmp ax, 0xFFFFFFFFFFFFFFFF
+        jne z
+        inc cx
+        cmp cx, 0x1AAA
+        jne y
+    ret
+
+
+
+
+###### PACMAN PROTOTYPE
+; pacman.asm
+bits 16
+org 0x9000
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+start:
+    call clear_screen
+    call start_screen
+    call enter_key
+    call set_video_mode
+    ll:
+    call draw_pacman
+    ;call clear_screen
+    call draw_pacman
+    ;call sleep
+    call wasd_key
+    jmp ll
+    jmp $
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+clear_screen:
+    mov ah, 0x06  ; BIOS function: scroll up window
+    mov al, 0     ; Clear entire screen
+    mov bh, 0x07  ; Attribute for cleared screen (white on black)
+    mov cx, 0     ; Top-left corner (0, 0)
+    mov dh, 24    ; Bottom-right corner (24, 79)
+    mov dl, 79
+    int 0x10
+    ret
+draw_background:
+    ; Set video mode (320x200, 256 colors)
+    mov ax, 0x0013
+    int 0x10
+
+    ; Set up video memory segment
+    mov ax, 0xA000
+    mov es, ax
+
+    ; Draw the pixel (white color)
+    mov di, 0
+    
+    loop_a:
+        mov byte [es:di], 0x02
+        inc di 
+        cmp di, 320 * 200
+        jne loop_a
+
+    ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+start_screen:
+
+    mov ah, 0x13  ; BIOS function: write string
+    mov al, 0x01  ; Attribute: update cursor
+    mov bh, 0x00  ; Page number
+
+    mov si, pc16b_lable
+
+    mov bl, 0x0E  ; Color attribute (green)
+    mov cx, 12   ; String length
+    mov dh, 2     ; Row
+    mov dl, 32    ; Column
+    mov bp, si    ; String offset
+    int 0x10
+    mov si, press_lable
+
+    mov bl, 0x10  ; Color attribute (green)
+    mov cx, 15   ; String length
+    mov dh, 12     ; Row
+    mov dl, 31    ; Column
+    mov bp, si    ; String offset
+    int 0x10
+    ret
+
+pc16b_lable db 'PACMAN 16BIT', 0
+press_lable db 'PRESS ENTER KEY', 0
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+sleep:
+    xor cx, cx
+    y:
+        xor ax, ax
+    z:
+        inc ax
+        cmp ax, 0xFFFFFFFFFFFFFFFF
+        jne z
+        inc cx
+        cmp cx, 0xFFF
+        jne y
+    ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+enter_key:
+    ; Wait for a key press
+    mov ah, 0x00
+    int 0x16
+    ; Check if the key pressed is Enter (ASCII 0x0D)
+    cmp al, 0x0D
+    jne enter_key
+    ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+wasd_key:
+    ; Check for a key press
+    mov ah, 0x01
+    int 0x16
+    jz no_key_pressed  ; If no key is pressed, jump to no_key_pressed
+
+    ; A key is pressed, save the key press in AL
+    mov ah, 0x00
+    int 0x16           ; Read the key press
+
+    ; Check if the key pressed is 'e' (ASCII 0x65)
+    cmp al, 119
+    je w_pressed
+    cmp al, 97
+    je a_pressed
+    cmp al, 115
+    je s_pressed
+    cmp al, 100
+    je d_pressed
+    jne no_key_pressed
+no_key_pressed:
+    ret
+w_pressed:
+    call draw_background
+    mov ax, 6
+    sub [pac_y], ax
+    mov ax, 0
+    ret
+a_pressed:
+    call draw_background
+    mov ax, 6
+    sub [pac_x], ax
+    mov ax, 0
+    ret
+s_pressed:
+    call draw_background
+    mov ax, 6
+    add [pac_y], ax
+    mov ax, 0
+    ret
+d_pressed:
+    call draw_background
+    mov ax, 6
+    add [pac_x], ax
+    mov ax, 0
+    ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+set_video_mode:
+    mov ah, 0x00  ; BIOS function: set video mode
+    mov al, 0x13  ; Video mode: VGA 320x200 256-color
+    int 0x10
+    ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+draw_pixel:
+    mov ah, 0x0c  ; BIOS function: write pixel
+    mov al, 0x0a  ; Pixel color (green)
+    mov cx, 160   ; X-coordinate (0-319)
+    mov dx, 100   ; Y-coordinate (0-199)
+    int 0x10
+    ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+draw_pacman:
+    mov bx, [pac_x]
+    mov si, pac_a      ; Load the address of the array into SI
+    mov cx, 13         ; Set the loop counter to the number of elements in the array
+    add_0:               ; Load the current element into AL
+        lodsb              ; Load byte at [SI] into AL and increment SI
+        add al, bl       ; Store the result back into the array
+        mov [si-1], al     ; Store AL at [SI-1] (SI was incremented by lodsb) Decrement the loop counter and loop if not zero
+        loop add_0
+
+    mov bx, [pac_x]
+    mov si, pac_b      ; Load the address of the array into SI
+    mov cx, 13         ; Set the loop counter to the number of elements in the array
+    add_1:               ; Load the current element into AL
+        lodsb              ; Load byte at [SI] into AL and increment SI
+        add al, bl       ; Store the result back into the array
+        mov [si-1], al     ; Store AL at [SI-1] (SI was incremented by lodsb) Decrement the loop counter and loop if not zero
+        loop add_1
+
+
+    mov ah, 0x02
+    int 0x1A
+    mov ah, 0x0c  ; BIOS function: write pixel
+    mov al, 0x0e  ; Pixel color (yellow)
+    xor cx, cx
+    xor dx, dx
+
+    mov bx, 0
+    S0:
+        mov cl, [pac_a + bx]   ; X-coordinate (0-319)
+    S1:
+        mov dl, bl   ; Y-coordinate (0-199)
+        add dl, [pac_y]
+        int 0x10
+        inc cl
+        cmp cl, [pac_b + bx]
+        jne S1
+        inc bx
+        cmp bx, 13
+        jne S0
+
+    mov bx, [pac_x]
+    mov si, pac_a      ; Load the address of the array into SI
+    mov cx, 13         ; Set the loop counter to the number of elements in the array
+    add_2:               ; Load the current element into AL
+        lodsb              ; Load byte at [SI] into AL and increment SI
+        sub al, bl       ; Store the result back into the array
+        mov [si-1], al     ; Store AL at [SI-1] (SI was incremented by lodsb) Decrement the loop counter and loop if not zero
+        loop add_2
+
+    mov bx, [pac_x]
+    mov si, pac_b      ; Load the address of the array into SI
+    mov cx, 13         ; Set the loop counter to the number of elements in the array
+    add_3:               ; Load the current element into AL
+        lodsb              ; Load byte at [SI] into AL and increment SI
+        sub al, bl       ; Store the result back into the array
+        mov [si-1], al     ; Store AL at [SI-1] (SI was incremented by lodsb) Decrement the loop counter and loop if not zero
+        loop add_3
+
+    ret
+
+pac_y db 187 -80
+pac_x dw 256 -13
+
+pac_a db 4, 2, 1, 1, 0, 0, 0, 0, 0, 1, 1, 2,4
+pac_b db 9,11,12,12,11,7,4,7,11,12,12,11,9
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+times 510-($-$$) db 0  ; Fill the rest of the boot sector with zeros
+
+
+
+############################################# TRIANGLE
+start:
+    mov ax, 0x0013              ; Set video mode to 320x200 256-color graphics
+    int 0x10
+
+    mov ax, 0xA000              ; Set ES to the video memory segment
+    mov es, ax
+    mov di, (320 * 20) + 20   ; Calculate the memory address for pixel (320 * 199 + 319) (320 * y) + x
+    mov cx, 0x0
+
+    mov bx, 0x0000
+    l1:
+        mov bl, bh
+    l0:
+        mov byte [es:di], 0x0E
+        inc bl
+        inc di
+        cmp bl, 10
+        jne l0
+        mov cl, bh
+        inc cl
+        add di, 310
+        add di, cx
+        inc bh
+        cmp bh, 10
+        jne l1
+    
+    mov ax, 0xA000              ; Set ES to the video memory segment
+    mov es, ax
+    mov di, (320 * 0) + 0   ; Calculate the memory address for pixel (320 * 199 + 319) (320 * y) + x
+    mov cx, 0x0
+
+    mov bx, 0x0000
+    l11:
+        mov bl, bh
+    l00:
+        mov byte [es:di], 0x0E
+        inc bl
+        inc di
+        cmp bl, 10
+        jne l00
+        mov cl, bh
+        inc cl
+        add di, 310
+        add di, cx
+        inc bh
+        cmp bh, 10
+        jne l11
+
+Graphic Development ############################################################################################
+
+org 0x9000
+bits 16
+; Move word from [ds:si] to [es:di] and increment si and di
+    
+start:
+    mov ax, 0x0013              ; Set video mode to 320x200 256-color graphics
+    int 0x10
+    llll:
+        mov ax, 0xABCD
+        mov ax, 0xDCBA
+        call texture_swap
+        call wasd_key
+        call pacman_draw
+        jmp llll
+    jmp $
+
+pacman_draw:
+    mov bx, [pac_y]
+    imul bx, 320
+    add bx, [pac_x]
+    mov ax, 0xA000
+    mov es, ax
+    mov di, bx   ; Calculate the memory address for pixel (320 * y) + x
+    xor ax, ax
+    mov ds, ax
+    mov si, pacman_textures
+    mov bx, 10
+    pac_draw_loop:
+        mov cx, 5
+        rep movsw
+        add di, 310
+        dec bx
+        jnz pac_draw_loop
+    ret
+
+pacman_delete:
+    mov ax, 0xA000
+    mov es, ax
+    mov bx, [pac_y]
+    imul bx, 320
+    add bx, [pac_x]
+    mov di, bx
+    mov cx, 10  ; Square size (height)
+    mov al, 0   ; Black color
+    draw_row:
+        mov bx, 10  ; Square size (width)
+    draw_pixel:
+        mov [es:di], al
+        inc di
+        dec bx
+        jnz draw_pixel
+        add di, 310 ; Move to the next row (320 - 10)
+        loop draw_row
+    ret
+
+horizontal_swap:
+    mov bx, pacman_textures   ; Load the offset of pacman_textures
+    mov si, bx
+    add bx, 99
+    mov di, bx
+    mov cx, 50
+    hs0:
+        mov al, [si]
+        xchg al, [di]
+        mov [si], al
+        inc si
+        dec di
+        loop hs0
+    ret
+
+diagonal_swap:
+    mov bx, pacman_textures   ; Load the offset of pacman_textures
+    mov ax, 0                ; Save the current data segment
+    mov ds, ax                ; Set DS back to the original segment
+    mov si, bx                ; SI points to the start of the array
+    mov di, bx
+    add di, 99                ; DI points to the last word of the array (50th word * 2 bytes - 2)
+    mov cl, 10
+    mov dl, 9
+    mov bx, 100
+    ds0:
+        mov al, [ds:si]           ; Load the first word into AX
+        mov ah, [ds:di]           ; Load the last word into DX
+        mov [ds:di], al           ; Store the first word at the end
+        mov [ds:si], ah           ; Store the last word at the beginning
+        sub di, 1
+        add si, 10
+        loop ds0
+    mov ch, 3
+    ds1:
+        sub si, bx
+        inc si
+        mov cl, dl
+        sub di, 9
+        add di, dx
+        ds2:
+            mov al, [ds:si]           ; Load the first word into AX
+            mov ah, [ds:di]           ; Load the last word into DX
+            mov [ds:di], al           ; Store the first word at the end
+            mov [ds:si], ah           ; Store the last word at the beginning
+            sub di, 1
+            add si, 10
+            dec cl
+            cmp cl, 0
+            jne ds2
+            dec dl
+            sub bx, 10
+            dec ch
+            cmp ch, 0
+            jne ds1
+    ret
+
+texture_swap:
+    mov si, pacman_textures  ; SI points to the start of array1
+    mov di, pacman_swaptext  ; DI points to the start of array2
+    mov cx, 50  ; CX holds the length of the arrays
+    ts0:
+        mov ax, [si]    ; Load the value from array1 into AX
+        xchg ax, [di]   ; Exchange the value in AX with the value in array2
+        mov [si], ax    ; Store the value from array2 into array1
+        add si, 2       ; Move to the next element in array1 (each element is 2 bytes)
+        add di, 2       ; Move to the next element in array2
+        loop ts0  ; Repeat until CX is 0
+    ret
+
+pacman_textures dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x0E0E, 0x0000, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x000E, 0x0000, 0x0E00, 0x0E0E
+                dw 0x0E0E, 0x0000, 0x0000, 0x0000, 0x0E0E
+                dw 0x000E, 0x0000, 0x0000, 0x0000, 0x0E00
+
+pacman_swaptext dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+                dw 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E, 0x0E0E
+pac_y dw 100
+pac_x dw 100
+pac_v dw 0
+
+wasd_key:
+    mov ah, 0x01
+    int 0x16
+    jz no_key_pressed  ; If no key is pressed, jump to no_key_pressed
+    call pacman_delete
+    mov ah, 0x00
+    int 0x16           ; Read the key press
+    cmp al, 119
+    je w_pressed
+    cmp al, 97
+    je a_pressed
+    cmp al, 115
+    je s_pressed
+    cmp al, 100
+    je d_pressed
+    jne no_key_pressed
+    w_pressed:
+        mov ax, 5
+        sub [pac_y], ax
+        ret
+    a_pressed:
+        mov ax, 5
+        sub [pac_x], ax
+        ret
+    s_pressed:
+        mov ax, 5
+        add [pac_y], ax
+        ret
+    d_pressed:
+        mov ax, 5
+        add [pac_x], ax
+        ret
+    no_key_pressed:
+        ret
+
+
+; sleep:
+;     mov cx, 0x02 ; High word of microseconds
+;     mov dx, 0x4240 ; Low word of microseconds (1000000 microseconds = 1 second)
+;     mov ah, 0x86 ; Function number for "Wait"
+;     int 0x15 ; Call the interrupt
+;     ret
+; 
+
+####### LATEST SPACE INVADER
+
+org 0x9000
+bits 16
+; Move word from [ds:si] to [es:di] and increment si and di
+start: ; Set video mode to 13h (320x200, 256 colors)
+    mov ax, 0x0013
+    int 0x10
+    
+game_loop:
+    ;call draw_bullet
+    call draw_aliens
+    call draw_ship
+    ;call sleep
+    call wasd_key
+    
+    jmp game_loop
+
+draw_aliens:
+    call zero_all
+    mov al, 0x0D
+    mov [color], al
+    mov si, invader_pattern ; Source index pointing to invader_pattern
+    call copy_array
+    mov di, [game_count]
+    call Alien_drawer
+    ;call zero_all
+    ;mov al, 0x0D
+    ;mov [color], al
+    ;mov si, invader_pattern ; Source index pointing to invader_pattern
+    ;call copy_array
+    ;mov di, [game_count]
+    ;call Alien_drawer
+    ;mov ax, 1
+    ;add [game_count],ax
+    ret
+
+draw_ship:
+    call zero_all
+    mov al, 0x02
+    mov [color], al
+    mov si, spaceship_pattern ; Source index pointing to invader_pattern
+    call copy_array
+    mov di, [spaceship_pos]
+    call draw_pattern
+    ret
+delete_ship:
+    call zero_all
+    mov al, 0x00
+    mov [color], al
+    mov di, [spaceship_pos]
+    call draw_pattern
+    ret
+
+draw_pattern: ; free reg dx
+    mov ax, 0xA000 ; m ax
+    mov es, ax
+    mov bx, 10     ; m bx
+    mov ah, 0b00000001
+    loop_1:
+        mov cx, 8  ; m cx
+        loop_0:
+            mov al, byte [saved_pattern + bx]
+            and al, ah
+            rol ah, 1
+            add di, 0x140
+            cmp al, 0
+            jnz draw
+            end:
+        loop loop_0
+        sub di, 0xA00
+        inc di
+        dec bx
+        cmp bx, -1
+        jne loop_1
+        ret
+        draw:
+        mov al, [color]
+        mov byte [es:di], al
+        jmp end
+    ret
+    
+Alien_drawer:
+    mov bx, [alien_pos]
+    mov dx, [alien_comparator] ; not used in pattern_draw
+    mov ax, dx
+    rol ax, 1
+    mov [alien_comparator], ax
+    and dx, [alien_set + bx]
+    cmp dx, 0
+    jg drawer
+    add di, 7+11
+    drawer_out:
+    mov cl, 1
+    add [alien_count], cl
+    mov cl, [alien_count]
+    cmp cl, 11
+    jne Alien_drawer
+    add di, (320-198) + 320*10
+    mov cl, 1
+    add [alien_count + 1], cl
+    mov cl, [alien_count + 1]
+    mov ch, 0
+    mov [alien_count], ch
+    mov dx, 1
+    mov [alien_comparator], dx
+    mov bx, 2
+    add [alien_pos], bx
+    cmp cl, 5
+    jne Alien_drawer
+    ret
+    drawer:
+        call draw_pattern
+        add di, 7
+        jmp drawer_out
+
+sleep:
+    mov dx, 0x1040 ; Low word of microseconds (1000000 microseconds = 1 second) ;mov cx, 0x00   ; High word of microseconds
+    mov ah, 0x86   ; Function number for "Wait"
+    int 0x15       ; Call the interrupt
+    ret
+
+copy_array: ; si array input
+    mov di, saved_pattern   ; Destination index pointing to saved_pattern
+    mov cx, 11              ; Counter set to 11 bytes to copy
+    rep movsb               ; Copy 11 bytes from [SI] to [DI]
+    ret                     ; Return from the function                         ; Return from the function
+
+zero_all:
+    xor ax, ax
+    mov es, ax
+    mov ds, ax
+    mov [alien_pos], ax
+    mov [alien_count], ax
+    inc ax
+    mov [alien_comparator], ax
+    ret
+
+wasd_key:
+    mov ah, 0x01
+    int 0x16
+    jz endw  ; If no key is pressed, jump to no_key_pressed
+    call delete_ship
+    mov ah, 0x00
+    int 0x16           ; Read the key press
+    cmp al, 97
+    je a_pressed
+    cmp al, 100
+    je d_pressed
+    endw:
+    ret
+    a_pressed:
+        mov ax, 2
+        sub [spaceship_pos], ax
+        ret
+    d_pressed:
+        mov ax, 2
+        add [spaceship_pos], ax
+        ret
+
+
+
+
+draw_bullet:
+    mov di, [bullet_pos]
+    cmp di, 320
+    jbe endb
+    sub di, 320
+    mov bx, 0xA000
+    mov es, bx
+    mov bl, 0x0C
+    mov byte [es:di], bl
+    mov bl, 0x00
+    add di, 640*2
+    mov byte [es:di], bl
+    mov ax, 320
+    sub [bullet_pos], ax
+    ret
+    endb:
+    mov ax, [spaceship_pos]
+    add ax, 5
+    mov [bullet_pos], ax
+    ret
+
+color db 0x0D
+game_count dw 0
+
+alien_set dw 0b0000011111111111,0b0000011111111110,0b0000011111111110,0b0000011111111110,0b0000011111101100
+alien_pos dw 0
+alien_comparator dw 0b0000000000000001
+alien_count db 0,0
+
+spaceship_pos dw 160 + 320 * 190
+
+bullet_run db 0
+bullet_pos dw 0
+
+spaceship_pattern db 0b11110000, 0b11111000, 0b11111000, 0b11111000, 0b11111110, 0b11111111, 0b11111110, 0b11111000, 0b11111000, 0b11111000, 0b11110000
+invader_pattern   db 0b01110000, 0b00011000, 0b01111101, 0b10110110, 0b10111100, 0b00111100, 0b10111100, 0b10110110, 0b01111101, 0b00011000, 0b01110000
+invader_lowpatt   db 0b00001110, 0b10011000, 0b01111101, 0b00110110, 0b00111100, 0b00111100, 0b00111100, 0b00110110, 0b01111101, 0b10011000, 0b00001110
+saved_pattern     db 0b0, 0b0, 0b0, 0b0, 0b0, 0b0, 0b0, 0b0, 0b0, 0b0, 0b0
+
+; RIGHT SHIFT 89 full row  |   309 last row
+; LEFT  SHIFT 0   back to  |   -220
+; (7+11)*11=198

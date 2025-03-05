@@ -1,0 +1,404 @@
+General-Purpose Registers
+These registers are used for a variety of operations, 
+including arithmetic, data manipulation, and addressing.
+--
+AX: Accumulator register, often used for arithmetic operations. AH: High byte of AX. AL: Low byte of AX.
+BX: Base register, used for addressing. BH: High byte of BX. BL: Low byte of BX.
+CX: Counter register, often used in loops. CH: High byte of CX. CL: Low byte of CX.
+DX: Data register, used in arithmetic operations and I/O operations. DH: High byte of DX. DL: Low byte of DX.
+
+Segment Registers
+These registers hold the segment addresses, 
+which are used in conjunction with other registers to form complete memory addresses.
+--
+CS: Code Segment register, points to the code segment in memory.
+DS: Data Segment register, points to the data segment in memory.
+SS: Stack Segment register, points to the stack segment in memory.
+ES: Extra Segment register, used in string operations.
+FS: Additional segment register introduced in later architectures.
+GS: Additional segment register introduced in later architectures.
+
+Pointer and Index Registers
+These registers are used for addressing and indexing memory locations.
+--
+SP: Stack Pointer, points to the top of the stack.
+BP: Base Pointer, used for accessing local variables in procedures.
+SI: Source Index, used in string operations.
+DI: Destination Index, used in string operations.
+Control Registers
+These registers are used to control the operation of the CPU and to hold status information.
+
+IP: Instruction Pointer, 
+holds the address of the next instruction to be executed.
+FLAGS: Contains flags such as Zero Flag, Carry Flag, Sign Flag, etc.,
+which indicate the result of the last operation.
+
+Special-Purpose Registers
+These registers are used for specific purposes, such as interrupt handling and task management.
+--
+IDTR: Interrupt Descriptor Table Register, used in exception and interrupt handling.
+GDTR: Global Descriptor Table Register, points to the Global Descriptor Table (GDT).
+LDTR: Local Descriptor Table Register, points to the Local Descriptor Table (LDT).
+TR: Task Register, used in task switching in multitasking environments.
+
+
+
+
+Sure! Here's a README version of the BIOS interrupt calls text:
+
+---
+
+# BIOS Interrupt Calls Reference
+
+This document provides a reference for common BIOS interrupt calls, specifically for video services (INT 0x10), disk services (INT 0x13), and keyboard services (INT 0x16). This list covers many frequently used BIOS functions.
+
+## BIOS Interrupt 0x10 (Video Services)
+
+### Set Video Mode
+```asm
+mov ah, 0x00
+mov al, <mode>
+int 0x10
+```
+- **Mode**: Video mode number (e.g., 0x03 for 80x25 text mode, 0x13 for 320x200 256-color mode)
+
+### Set Cursor Position
+```asm
+mov ah, 0x02
+mov bh, <page>
+mov dh, <row>
+mov dl, <column>
+int 0x10
+```
+- **Page**: Display page number
+- **Row**: Cursor row
+- **Column**: Cursor column
+
+### Write Character and Attribute at Cursor Position
+```asm
+mov ah, 0x09
+mov al, <character>
+mov bh, <page>
+mov bl, <attribute>
+mov cx, <count>
+int 0x10
+```
+- **Character**: ASCII character to display
+- **Page**: Display page number
+- **Attribute**: Text attribute (color)
+- **Count**: Number of times to write the character
+
+### Write Character Only at Cursor Position
+```asm
+mov ah, 0x0A
+mov al, <character>
+mov bh, <page>
+mov bl, <attribute>
+mov cx, <count>
+int 0x10
+```
+- **Character**: ASCII character to display
+- **Page**: Display page number
+- **Attribute**: Text attribute (color)
+- **Count**: Number of times to write the character
+
+### Scroll Up Window
+```asm
+mov ah, 0x06
+mov al, <lines>
+mov bh, <attribute>
+mov cx, <start_row_col>
+mov dx, <end_row_col>
+int 0x10
+```
+- **Lines**: Number of lines to scroll (0 = clear entire screen)
+- **Attribute**: Text attribute for cleared lines
+- **Start Row/Col**: Top-left corner of the window
+- **End Row/Col**: Bottom-right corner of the window
+
+### Write String
+```asm
+mov ah, 0x13
+mov al, <write_mode>
+mov bh, <page>
+mov bl, <attribute>
+mov cx, <length>
+mov dh, <row>
+mov dl, <column>
+mov bp, <string_offset>
+int 0x10
+```
+- **Write Mode**: Write mode (e.g., 0x00 for normal, 0x01 for updating cursor)
+- **Page**: Display page number
+- **Attribute**: Text attribute (color)
+- **Length**: Length of the string
+- **Row**: Cursor row
+- **Column**: Cursor column
+- **String Offset**: Offset of the string in memory
+
+## BIOS Interrupt 0x13 (Disk Services)
+
+### Reset Disk System
+```asm
+mov ah, 0x00
+int 0x13
+```
+
+### Read Sectors from Drive
+```asm
+mov ah, 0x02
+mov al, <sectors>
+mov ch, <track>
+mov cl, <sector>
+mov dh, <head>
+mov dl, <drive>
+mov bx, <buffer>
+int 0x13
+```
+- **Sectors**: Number of sectors to read
+- **Track**: Track number
+- **Sector**: Sector number
+- **Head**: Head number
+- **Drive**: Drive number
+- **Buffer**: Buffer address to store data
+
+### Write Sectors to Drive
+```asm
+mov ah, 0x03
+mov al, <sectors>
+mov ch, <track>
+mov cl, <sector>
+mov dh, <head>
+mov dl, <drive>
+mov bx, <buffer>
+int 0x13
+```
+- **Sectors**: Number of sectors to write
+- **Track**: Track number
+- **Sector**: Sector number
+- **Head**: Head number
+- **Drive**: Drive number
+- **Buffer**: Buffer address containing data
+
+### Get Drive Parameters
+```asm
+mov ah, 0x08
+mov dl, <drive>
+int 0x13
+```
+- **Drive**: Drive number
+
+## BIOS Interrupt 0x16 (Keyboard Services)
+
+### Read Key Stroke
+```asm
+mov ah, 0x00
+int 0x16
+```
+- **Returns**: AH = BIOS scan code, AL = ASCII character
+
+### Check for Key Stroke
+```asm
+mov ah, 0x01
+int 0x16
+```
+- **Returns**: ZF = 0 if a key is available, AH = BIOS scan code, AL = ASCII character
+
+### Get Keyboard Status
+```asm
+mov ah, 0x02
+int 0x16
+```
+- **Returns**: AL = Shift flags
+
+### Get Shift Status
+```asm
+mov ah, 0x12
+int 0x16
+```
+- **Returns**: AL = Shift flags
+
+## BIOS Interrupt 0x19 (Bootstrap Loader)
+
+### Reboot System
+```asm
+int 0x19
+```
+
+## BIOS Interrupt 0x1A (Time Services)
+
+### Get System Time
+```asm
+mov ah, 0x00
+int 0x1A
+```
+- **Returns**: CX = Hours and minutes, DX = Seconds and daylight savings flag
+
+### Set System Time
+```asm
+mov ah, 0x01
+mov cx, <hours_minutes>
+mov dx, <seconds>
+int 0x1A
+```
+- **Hours/Minutes**: Hours and minutes
+- **Seconds**: Seconds
+
+### Get Real-Time Clock Time
+```asm
+mov ah, 0x02
+int 0x1A
+```
+- **Returns**: CH = Hours, CL = Minutes, DH = Seconds, DL = Daylight savings flag
+
+### Set Real-Time Clock Time
+```asm
+mov ah, 0x03
+mov ch, <hours>
+mov cl, <minutes>
+mov dh, <seconds>
+int 0x1A
+```
+- **Hours**: Hours
+- **Minutes**: Minutes
+- **Seconds**: Seconds
+
+
+
+String Operations
+LODSB (Load String Byte)
+Description: Loads a byte from the source string (pointed to by SI) into the AL register and increments or decrements SI based on the direction flag.
+Syntax: lodsb
+LODSW (Load String Word)
+Description: Loads a word from the source string (pointed to by SI) into the AX register and increments or decrements SI by 2 based on the direction flag.
+Syntax: lodsw
+STOSB (Store String Byte)
+Description: Stores the byte in the AL register into the destination string (pointed to by DI) and increments or decrements DI based on the direction flag.
+Syntax: stosb
+STOSW (Store String Word)
+Description: Stores the word in the AX register into the destination string (pointed to by DI) and increments or decrements DI by 2 based on the direction flag.
+Syntax: stosw
+MOVSB (Move String Byte)
+Description: Moves a byte from the source string (pointed to by SI) to the destination string (pointed to by DI) and increments or decrements SI and DI based on the direction flag.
+Syntax: movsb
+MOVSW (Move String Word)
+Description: Moves a word from the source string (pointed to by SI) to the destination string (pointed to by DI) and increments or decrements SI and DI by 2 based on the direction flag.
+Syntax: movsw
+SCASB (Scan String Byte)
+Description: Compares the byte in the AL register with the byte in the destination string (pointed to by DI) and increments or decrements DI based on the direction flag.
+Syntax: scasb
+SCASW (Scan String Word)
+Description: Compares the word in the AX register with the word in the destination string (pointed to by DI) and increments or decrements DI by 2 based on the direction flag.
+Syntax: scasw
+CMPSB (Compare String Byte)
+Description: Compares the byte in the source string (pointed to by SI) with the byte in the destination string (pointed to by DI) and increments or decrements SI and DI based on the direction flag.
+Syntax: cmpsb
+CMPSW (Compare String Word)
+Description: Compares the word in the source string (pointed to by SI) with the word in the destination string (pointed to by DI) and increments or decrements SI and DI by 2 based on the direction flag.
+Syntax: cmpsw
+REP (Repeat)
+Description: Repeats the following string operation the number of times specified in the CX register.
+Syntax: rep <string_instruction>
+REPE/REPZ (Repeat While Equal/Zero)
+Description: Repeats the following string operation while the zero flag is set and the CX register is not zero.
+Syntax: repe <string_instruction> or repz <string_instruction>
+REPNE/REPNZ (Repeat While Not Equal/Not Zero)
+Description: Repeats the following string operation while the zero flag is not set and the CX register is not zero.
+Syntax: repne <string_instruction> or repnz <string_instruction>
+Example Usage
+Here are some examples of how to use these string operations in 16-bit assembly:
+
+Example 1: Copying a String with MOVSB
+section .data
+    source db 'Hello, World!', 0
+    destination times 13 db 0
+
+section .text
+    global _start
+
+_start:
+    mov si, source       ; Load address of source string into SI
+    mov di, destination  ; Load address of destination string into DI
+    mov cx, 13           ; Set the loop counter to the length of the string
+
+    rep movsb            ; Repeat MOVSB CX times
+
+    ; Hang the system (for demonstration purposes)
+    jmp $
+Example 2: Comparing Strings with CMPSB
+section .data
+    string1 db 'Hello, World!', 0
+    string2 db 'Hello, World!', 0
+
+section .text
+    global _start
+
+_start:
+    mov si, string1      ; Load address of first string into SI
+    mov di, string2      ; Load address of second string into DI
+    mov cx, 13           ; Set the loop counter to the length of the strings
+
+    repe cmpsb           ; Repeat CMPSB while equal and CX is not zero
+
+    ; Check if strings are equal
+    jz strings_equal     ; If zero flag is set, strings are equal
+
+    ; Strings are not equal
+    jmp strings_not_equal
+
+strings_equal:
+    ; Code to handle equal strings
+    jmp $
+
+strings_not_equal:
+    ; Code to handle unequal strings
+    jmp $
+Example 3: Scanning a String with SCASB
+section .data
+    string db 'Hello, World!', 0
+
+section .text
+    global _start
+
+_start:
+    mov di, string       ; Load address of string into DI
+    mov al, 'W'          ; Load character to search for into AL
+    mov cx, 13           ; Set the loop counter to the length of the string
+
+    repe scasb           ; Repeat SCASB while equal and CX is not zero
+
+    ; Check if character was found
+    jz char_found        ; If zero flag is set, character was found
+
+    ; Character not found
+    jmp char_not_found
+
+char_found:
+    ; Code to handle character found
+    jmp $
+
+char_not_found:
+    ; Code to handle character not found
+    jmp $
+
+
+
+
+
+
+
+=> 0x9000:
+=> 0x9003:
+=> 0x9006:
+=> 0x9009:
+=> 0x900c:
+=> 0x900f:
+=> 0x9012:
+=> 0x9015:
+=> 0x9018:
+=> 0x901b:
+=> 0x901e:
+=> 0x9021:
+=> 0x9024:
+=> 0x9027:
+=> 0x902a:
